@@ -75,6 +75,9 @@ server.get('/weather', (req,res)=>{
 
   let weatherData = require('./data/weather.json');
 
+  Weather.all =[];
+
+
   weatherData.data.forEach((e) => {
 
     new Weather(e);
