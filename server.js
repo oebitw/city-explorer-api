@@ -177,8 +177,9 @@ function Weather(data){
 
 function Park (data){
   this.name= data.fullName;
-  this.address= data.addresses[0].line1;
-  this.fees= data.entranceFees[0].cost;
+  //   this.address= data.addresses[0].line1;
+  this.address = `${data.addresses[0].line1},  ${data.addresses[0].city}, ${data.addresses[0].stateCode} ${data.addresses[0].postalCode}`;
+  this.fee= data.entranceFees[0].cost;
   this.description= data.description;
   this.url = data.url;
 }
@@ -191,10 +192,3 @@ function Park (data){
 app.listen(PORT, ()=>{
   console.log('ACTIVE ON:', PORT);
 });
-
-
-
-
-
-
-
