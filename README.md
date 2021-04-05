@@ -20,9 +20,11 @@ This application was build with Node.js and it includes:
 * express.js framework
 * cors.js library
 * dotenv.js library
+* SuperAgent library
 
 ## Change Log
 
 
 04-04-2021  - Application now has a fully-functional express server responding to the clients requests from a data stored in the server, with a GET route for the location and weather resource.
 
+05-04-2021  - Application now has a fully-functional express server responding to the clients requests from external API's, with a GET route for the location, weather and national Parks in the cities around the world.
