@@ -16,6 +16,11 @@ const cors = require('cors');
 // client-side HTTP request library
 const superagent = require('superagent');
 
+// postgress
+
+const pg = require('pg');
+
+
 
 /////////////////////////////
 //// Application Setup    //
@@ -24,6 +29,8 @@ const superagent = require('superagent');
 const PORT = process.env.PORT || 3030;
 const app = express();
 app.use(cors());
+const client = new pg.Client({ connectionString: process.env.DATABASE_URL, ssl: { rejectUnauthorized: false } });
+// const client = new pg.Client(process.env.DATABASE_URL);
 
 
 ////////////////////
@@ -54,25 +61,47 @@ function homeRouteHandler(request, response) {
 //http://localhost:3000/location?city=amman
 
 function locationHandler(req, res) {
-  // get data from api server (locationIQ)
-  // send a request using superagent library (request url + key)
-  console.log(req.query);
+
   let cityName = req.query.city;
-  console.log(cityName);
   let key = process.env.LOCATION_KEY;
   let LocURL = `https://eu1.locationiq.com/v1/search.php?key=${key}&q=${cityName}&format=json`;
+  let SQL = `SELECT * FROM locations WHERE search_query = '${cityName}';`;
 
-  superagent.get(LocURL) //send request to LocationIQ API
-    .then(geoData => {
-      console.log(geoData.body);
-      let gData = geoData.body;
-      const locationData = new Location(cityName, gData);
-      res.send(locationData);
-    })
-    .catch(error => {
-      console.error(error);
-      res.send(error);
-    });
+  client.query(SQL).then( locationData =>{
+    if( locationData.rows.length===0){
+      superagent.get(LocURL) //send request to LocationIQ API
+        .then(geoData => {
+          let gData = geoData.body;
+          const locationData = new Location(cityName, gData);
+
+          console.log(locationData , '1111111111111');
+
+
+          const addData = `INSERT INTO locations(search_query, formatted_query, latitude, longitude) VALUES ($1,$2,$3,$4);`;
+          let safeValues = [cityName, locationData.formatted_query, locationData.latitude, locationData.longitude];
+
+          client.query(addData, safeValues)
+            .then(() => {
+              res.status(200).send(locationData);
+            });
+
+        }) .catch(() => {
+
+          res.status(404).send('Page Not Found: There is no Data, Try another City Please.');
+
+        });
+
+    } else if (locationData.rows[0].search_query === cityName){
+
+      console.log(locationData , '222222222');
+
+      res.status(200).send(locationData.rows[0]);
+
+    }
+  }) .catch(error => {
+    console.error(error);
+    res.send(error);
+  });
 
 }
 
@@ -189,6 +218,12 @@ function Park (data){
 //// Server Listening   ////
 ///////////////////////////
 
-app.listen(PORT, ()=>{
-  console.log('ACTIVE ON:', PORT);
-});
+// app.listen(PORT, ()=>{
+//   console.log('ACTIVE ON:', PORT);
+// });
+client.connect()
+  .then(() => {
+    app.listen(PORT, () =>
+      console.log(`listening on ${PORT}`)
+    );
+  });
