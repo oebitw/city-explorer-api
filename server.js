@@ -19,6 +19,7 @@ const superagent = require('superagent');
 // postgress
 
 const pg = require('pg');
+const { head } = require('superagent');
 
 
 
@@ -41,6 +42,8 @@ app.get('/', homeRouteHandler);
 app.get('/location', locationHandler);
 app.get('/weather', weatherHandler);
 app.get('/parks', parksHandler);
+app.get('/yelp', yelpHandler);
+app.get('/movies', moviesHandler);
 app.get('*', notFoundHandler);
 
 
@@ -172,6 +175,68 @@ function parksHandler(req,res){
 
 }
 
+// YELP HANDLER
+// http://localhost:3000/yelp?id=2&search_query=seattle&formatted_query=Seattle%2C%20King%20County%2C%20Washington%2C%20USA&latitude=47.6038321&longitude=-122.3300624&page=1
+
+
+function yelpHandler (req,res){
+
+
+  let cityName=req.query.search_query;
+
+  let pageNum= req.query.page;
+
+  let key= process.env.YELP_KEY;
+
+  let numPerPage=5;
+
+  let index=((pageNum-1) * numPerPage +1);
+
+  let yelpURL= `https://api.yelp.com/v3/businesses/search?location=${cityName}&limit=${numPerPage}&offset=${index}`;
+
+  superagent.get(yelpURL).set(`Authorization`, `Bearer ${key}`).then(yelpData =>{
+
+
+
+    let yelpDataBody = yelpData.body;
+
+    // res.send(yelpDataBody);
+
+    let correctData = yelpDataBody.businesses.map(e=>{
+      return new Yelp(e);
+    });
+
+    res.status(200).send(correctData);
+
+  }).catch(error => {
+    res.send(error);
+  });
+}
+
+// Movies Handler
+//http://localhost:3000/movies?id=2&search_query=seattle&formatted_query=Seattle%2C%20King%20County%2C%20Washington%2C%20USA&latitude=47.6038321&longitude=-122.3300624&page=1
+
+function moviesHandler(req,res){
+  let cityName= req.query.search_query;
+
+  let key = process.env.MOVIES_KEY;
+
+  let moviesURL=`https://api.themoviedb.org/3/search/movie?api_key=${key}&query=${cityName}`;
+
+  superagent.get(moviesURL).then(moviesData=>{
+
+    let moviesDataBody=moviesData.body;
+
+    let correctData = moviesDataBody.results.map( e=>{
+      return new Movie (e);
+    });
+
+    res.status(200).send(correctData);
+
+
+  });
+}
+
 
 // Error Handler
 
@@ -213,6 +278,37 @@ function Park (data){
   this.url = data.url;
 }
 
+// YELP CONSTRUCTOR
+
+function Yelp (data){
+
+  this.name=data.name;
+  this.image_url=data.image_url;
+  this.price= data.price;
+  this.rating=data.rating;
+  this.url=data.url;
+
+}
+
+// MOVIES CONSTRUCTOR
+
+function Movie (data){
+
+  this.title=data.original_title;
+
+  this.overview=data.overview;
+
+  this.average_votes=data.vote_average;
+
+  this.total_votes=data.vote_count;
+
+  this.image_url=`https://image.tmdb.org/t/p/w500${data.poster_path}`;
+
+  this.popularity=data.popularity;
+
+  this.released_on= data.release_date;
+
+}
 
 /////////////////////////////
 //// Server Listening   ////
